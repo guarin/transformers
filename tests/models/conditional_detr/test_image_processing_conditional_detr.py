@@ -26,6 +26,7 @@ from ...test_image_processing_common import (
     AnnotationFormatTestMixin,
     ImageProcessingTestMixin,
     PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
     prepare_image_inputs,
 )
 
@@ -156,7 +157,11 @@ class ConditionalDetrImageProcessingTester:
 @require_torch
 @require_vision
 class ConditionalDetrImageProcessingTest(
-    AnnotationFormatTestMixin, ImageProcessingTestMixin, PostProcessSemanticSegmentationTestMixin, unittest.TestCase
+    AnnotationFormatTestMixin,
+    ImageProcessingTestMixin,
+    PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
+    unittest.TestCase,
 ):
     def setUp(self):
         super().setUp()

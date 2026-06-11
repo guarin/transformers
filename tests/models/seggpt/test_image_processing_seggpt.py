@@ -23,6 +23,7 @@ from transformers.utils import is_torch_available, is_vision_available
 from ...test_image_processing_common import (
     ImageProcessingTestMixin,
     PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
     prepare_image_inputs,
 )
 
@@ -128,7 +129,12 @@ def prepare_img():
 
 @require_torch
 @require_vision
-class SegGptImageProcessingTest(ImageProcessingTestMixin, PostProcessSemanticSegmentationTestMixin, unittest.TestCase):
+class SegGptImageProcessingTest(
+    ImageProcessingTestMixin,
+    PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
+    unittest.TestCase,
+):
     def setUp(self):
         super().setUp()
         self.image_processor_tester = SegGptImageProcessingTester(self)
@@ -145,6 +151,26 @@ class SegGptImageProcessingTest(ImageProcessingTestMixin, PostProcessSemanticSeg
             self.assertTrue(hasattr(image_processing, "do_normalize"))
             self.assertTrue(hasattr(image_processing, "do_resize"))
             self.assertTrue(hasattr(image_processing, "size"))
+
+    def test_post_process_semantic_segmentation_scores_only_requires_num_labels(self):
+        for image_processing_class in self.image_processing_classes.values():
+            with self.subTest(image_processing_class):
+                image_processor = image_processing_class(**self.image_processor_dict)
+                outputs = SegGptImageSegmentationOutput(
+                    pred_masks=torch.randn(
+                        self.image_processor_tester.batch_size,
+                        self.image_processor_tester.num_channels,
+                        self.image_processor_tester.size["height"],
+                        self.image_processor_tester.size["width"],
+                    )
+                )
+
+                with self.assertRaises(ValueError):
+                    image_processor.post_process_semantic_segmentation(
+                        outputs,
+                        return_segmentation=False,
+                        return_segmentation_scores=True,
+                    )
 
     def test_image_processor_from_dict_with_kwargs(self):
         for image_processing_class in self.image_processing_classes.values():

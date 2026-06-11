@@ -186,6 +186,7 @@ class MobileNetV2ImageProcessor(TorchvisionBackend):
         outputs,
         target_sizes: list[tuple[int, int]] | None = None,
         return_segmentation_scores: bool = False,
+        return_segmentation: bool = True,
     ) -> "list[torch.Tensor] | list[SemanticSegmentationPostProcessorOutput]":
         """
         Converts the output of [`MobileNetV2ForSemanticSegmentation`] into semantic segmentation maps.
@@ -200,6 +201,10 @@ class MobileNetV2ImageProcessor(TorchvisionBackend):
                 the returned list is a [`SemanticSegmentationPostProcessorOutput`] with fields `segmentation`
                 (class IDs, shape `(height, width)`) and `segmentation_scores` (shape `(num_classes, height, width)`).
 
+            return_segmentation (`bool`, *optional*, defaults to `True`):
+                Whether to return the hard segmentation map. When `False`, the hard map is not computed and
+                `segmentation` is `None` in each output.
+
         Returns:
             `list[torch.Tensor]` or `list[SemanticSegmentationPostProcessorOutput]`: When
             `return_segmentation_scores=False` (default), a list of length `batch_size` where each item is a
@@ -208,6 +213,9 @@ class MobileNetV2ImageProcessor(TorchvisionBackend):
             `(height, width)`) and `segmentation_scores` (shape `(num_classes, height, width)`). In both cases,
             `(height, width)` corresponds to the target size (if `target_sizes` is specified).
         """
+        if not return_segmentation and not return_segmentation_scores:
+            raise ValueError("At least one of `return_segmentation` or `return_segmentation_scores` must be True.")
+
         if not is_torch_available():
             raise ImportError("PyTorch is required for post_process_semantic_segmentation")
         logits = outputs.logits
@@ -227,7 +235,7 @@ class MobileNetV2ImageProcessor(TorchvisionBackend):
                 semantic_segmentation.append(
                     SemanticSegmentationPostProcessorOutput(
                         data={
-                            "segmentation": resized_logits[0].argmax(dim=0),
+                            "segmentation": resized_logits[0].argmax(dim=0) if return_segmentation else None,
                             "segmentation_scores": resized_logits[0],
                         }
                     )
@@ -235,12 +243,15 @@ class MobileNetV2ImageProcessor(TorchvisionBackend):
         else:
             semantic_segmentation = [
                 SemanticSegmentationPostProcessorOutput(
-                    data={"segmentation": logits[i].argmax(dim=0), "segmentation_scores": logits[i]}
+                    data={
+                        "segmentation": logits[i].argmax(dim=0) if return_segmentation else None,
+                        "segmentation_scores": logits[i],
+                    }
                 )
                 for i in range(batch_size)
             ]
 
-        if not return_segmentation_scores:
+        if return_segmentation and not return_segmentation_scores:
             semantic_segmentation = [item.segmentation for item in semantic_segmentation]
 
         return semantic_segmentation

@@ -22,6 +22,7 @@ from transformers.utils import is_torch_available, is_vision_available
 from ...test_image_processing_common import (
     ImageProcessingTestMixin,
     PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
     prepare_image_inputs,
 )
 
@@ -115,7 +116,12 @@ def prepare_semantic_batch_inputs():
 
 @require_torch
 @require_vision
-class Sam3ImageProcessingTest(ImageProcessingTestMixin, PostProcessSemanticSegmentationTestMixin, unittest.TestCase):
+class Sam3ImageProcessingTest(
+    ImageProcessingTestMixin,
+    PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
+    unittest.TestCase,
+):
     def setUp(self):
         super().setUp()
         self.image_processor_tester = Sam3ImageProcessingTester(self)

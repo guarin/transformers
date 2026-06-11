@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import Mock
 
 from transformers import AutoTokenizer
 from transformers.models.sam3.processing_sam3 import Sam3Processor
@@ -90,6 +91,37 @@ class Sam3ProcessorTest(ProcessorTesterMixin, unittest.TestCase):
         )
         self.assertNotIn("input_boxes", inputs)
         self.assertNotIn("input_boxes_labels", inputs)
+
+    def test_post_process_semantic_segmentation_forwards_return_segmentation(self):
+        image_processor = Mock()
+        image_processor.post_process_semantic_segmentation.return_value = ["scores"]
+        processor = self.get_processor()
+        processor.image_processor = image_processor
+        outputs = Mock()
+
+        result = processor.post_process_semantic_segmentation(
+            outputs,
+            target_sizes=[(8, 8)],
+            threshold=0.7,
+            return_segmentation_scores=True,
+            return_segmentation=False,
+        )
+
+        self.assertEqual(result, ["scores"])
+        image_processor.post_process_semantic_segmentation.assert_called_once_with(
+            outputs,
+            target_sizes=[(8, 8)],
+            threshold=0.7,
+            return_segmentation_scores=True,
+            return_segmentation=False,
+        )
+
+        with self.assertRaises(ValueError):
+            processor.post_process_semantic_segmentation(
+                outputs,
+                return_segmentation_scores=False,
+                return_segmentation=False,
+            )
 
     def test_user_provided_labels_preserved(self):
         processor = self.get_processor()

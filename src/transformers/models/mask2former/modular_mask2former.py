@@ -40,6 +40,7 @@ class Mask2FormerImageProcessor(MaskFormerImageProcessor):
         outputs,
         target_sizes: list[tuple[int, int]] | None = None,
         return_segmentation_scores: bool = False,
+        return_segmentation: bool = True,
     ) -> "list[torch.Tensor] | list[SemanticSegmentationPostProcessorOutput]":
         """
         Converts the output of [`Mask2FormerForUniversalSegmentation`] into semantic segmentation maps. Only supports
@@ -56,6 +57,10 @@ class Mask2FormerImageProcessor(MaskFormerImageProcessor):
                 the returned list is a [`SemanticSegmentationPostProcessorOutput`] with fields `segmentation`
                 (class IDs, shape `(height, width)`) and `segmentation_scores` (shape `(num_classes, height, width)`).
 
+            return_segmentation (`bool`, *optional*, defaults to `True`):
+                Whether to return the hard segmentation map. When `False`, the hard map is not computed and
+                `segmentation` is `None` in each output.
+
         Returns:
             `list[torch.Tensor]` or `list[SemanticSegmentationPostProcessorOutput]`: When
             `return_segmentation_scores=False` (default), a list of length `batch_size` where each item is a
@@ -64,6 +69,9 @@ class Mask2FormerImageProcessor(MaskFormerImageProcessor):
             `(height, width)`) and `segmentation_scores` (shape `(num_classes, height, width)`). In both cases,
             `(height, width)` corresponds to the target size (if `target_sizes` is specified).
         """
+        if not return_segmentation and not return_segmentation_scores:
+            raise ValueError("At least one of `return_segmentation` or `return_segmentation_scores` must be True.")
+
         class_queries_logits = outputs.class_queries_logits  # [batch_size, num_queries, num_classes+1]
         masks_queries_logits = outputs.masks_queries_logits  # [batch_size, num_queries, height, width]
 
@@ -92,14 +100,14 @@ class Mask2FormerImageProcessor(MaskFormerImageProcessor):
                 resized_logits = torch.nn.functional.interpolate(
                     segmentation[idx].unsqueeze(dim=0), size=target_sizes[idx], mode="bilinear", align_corners=False
                 )
-                semantic_map = resized_logits[0].argmax(dim=0)
+                semantic_map = resized_logits[0].argmax(dim=0) if return_segmentation else None
                 semantic_segmentation.append(
                     SemanticSegmentationPostProcessorOutput(
                         data={"segmentation": semantic_map, "segmentation_scores": resized_logits[0]}
                     )
                 )
         else:
-            semantic_map = segmentation.argmax(dim=1)
+            semantic_map = segmentation.argmax(dim=1) if return_segmentation else [None] * batch_size
             semantic_segmentation = [
                 SemanticSegmentationPostProcessorOutput(
                     data={"segmentation": semantic_map[i], "segmentation_scores": segmentation[i]}
@@ -107,7 +115,7 @@ class Mask2FormerImageProcessor(MaskFormerImageProcessor):
                 for i in range(batch_size)
             ]
 
-        if not return_segmentation_scores:
+        if return_segmentation and not return_segmentation_scores:
             semantic_segmentation = [item.segmentation for item in semantic_segmentation]
 
         return semantic_segmentation
@@ -336,6 +344,7 @@ class Mask2FormerImageProcessorPil(MaskFormerImageProcessorPil):
         outputs,
         target_sizes: list[tuple[int, int]] | None = None,
         return_segmentation_scores: bool = False,
+        return_segmentation: bool = True,
     ) -> "list[torch.Tensor] | list[SemanticSegmentationPostProcessorOutput]":
         """
         Converts the output of [`Mask2FormerForUniversalSegmentation`] into semantic segmentation maps. Only supports
@@ -352,6 +361,10 @@ class Mask2FormerImageProcessorPil(MaskFormerImageProcessorPil):
                 the returned list is a [`SemanticSegmentationPostProcessorOutput`] with fields `segmentation`
                 (class IDs, shape `(height, width)`) and `segmentation_scores` (shape `(num_classes, height, width)`).
 
+            return_segmentation (`bool`, *optional*, defaults to `True`):
+                Whether to return the hard segmentation map. When `False`, the hard map is not computed and
+                `segmentation` is `None` in each output.
+
         Returns:
             `list[torch.Tensor]` or `list[SemanticSegmentationPostProcessorOutput]`: When
             `return_segmentation_scores=False` (default), a list of length `batch_size` where each item is a
@@ -360,6 +373,9 @@ class Mask2FormerImageProcessorPil(MaskFormerImageProcessorPil):
             `(height, width)`) and `segmentation_scores` (shape `(num_classes, height, width)`). In both cases,
             `(height, width)` corresponds to the target size (if `target_sizes` is specified).
         """
+        if not return_segmentation and not return_segmentation_scores:
+            raise ValueError("At least one of `return_segmentation` or `return_segmentation_scores` must be True.")
+
         requires_backends(self, ["torch"])
         class_queries_logits = outputs.class_queries_logits  # [batch_size, num_queries, num_classes+1]
         masks_queries_logits = outputs.masks_queries_logits  # [batch_size, num_queries, height, width]
@@ -389,14 +405,14 @@ class Mask2FormerImageProcessorPil(MaskFormerImageProcessorPil):
                 resized_logits = torch.nn.functional.interpolate(
                     segmentation[idx].unsqueeze(dim=0), size=target_sizes[idx], mode="bilinear", align_corners=False
                 )
-                semantic_map = resized_logits[0].argmax(dim=0)
+                semantic_map = resized_logits[0].argmax(dim=0) if return_segmentation else None
                 semantic_segmentation.append(
                     SemanticSegmentationPostProcessorOutput(
                         data={"segmentation": semantic_map, "segmentation_scores": resized_logits[0]}
                     )
                 )
         else:
-            semantic_map = segmentation.argmax(dim=1)
+            semantic_map = segmentation.argmax(dim=1) if return_segmentation else [None] * batch_size
             semantic_segmentation = [
                 SemanticSegmentationPostProcessorOutput(
                     data={"segmentation": semantic_map[i], "segmentation_scores": segmentation[i]}
@@ -404,7 +420,7 @@ class Mask2FormerImageProcessorPil(MaskFormerImageProcessorPil):
                 for i in range(batch_size)
             ]
 
-        if not return_segmentation_scores:
+        if return_segmentation and not return_segmentation_scores:
             semantic_segmentation = [item.segmentation for item in semantic_segmentation]
 
         return semantic_segmentation

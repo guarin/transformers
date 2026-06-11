@@ -14,6 +14,7 @@
 
 import unittest
 
+from transformers.image_processing_outputs import SemanticSegmentationPostProcessorOutput
 from transformers.image_utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from transformers.testing_utils import require_torch, require_torchvision, require_vision
 from transformers.utils import is_torch_available, is_torchvision_available, is_vision_available
@@ -157,6 +158,33 @@ class VideomtVideoProcessingTest(VideoProcessingTestMixin, unittest.TestCase):
         for seg_map in segmentation:
             self.assertIsInstance(seg_map, torch.Tensor)
             self.assertEqual(seg_map.shape, (32, 32))
+
+    def test_post_process_semantic_segmentation_scores_only(self):
+        video_processor = self.fast_video_processing_class(**self.video_processor_dict)
+
+        num_frames = 4
+        target_sizes = [(32, 32)] * num_frames
+        outputs = self.video_processor_tester.prepare_fake_videomt_outputs(num_frames)
+
+        segmentation = video_processor.post_process_semantic_segmentation(
+            outputs,
+            target_sizes,
+            return_segmentation=False,
+            return_segmentation_scores=True,
+        )
+
+        self.assertEqual(len(segmentation), num_frames)
+        self.assertIsInstance(segmentation[0], SemanticSegmentationPostProcessorOutput)
+        self.assertIsNone(segmentation[0].segmentation)
+        self.assertEqual(segmentation[0].segmentation_scores.shape, (self.video_processor_tester.num_classes, 32, 32))
+
+        with self.assertRaises(ValueError):
+            video_processor.post_process_semantic_segmentation(
+                outputs,
+                target_sizes,
+                return_segmentation=False,
+                return_segmentation_scores=False,
+            )
 
     def test_post_process_instance_segmentation(self):
         video_processor = self.fast_video_processing_class(**self.video_processor_dict)
