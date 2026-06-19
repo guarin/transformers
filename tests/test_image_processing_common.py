@@ -28,6 +28,7 @@ import numpy as np
 import pytest
 
 from transformers import AutoImageProcessor, BatchFeature
+from transformers.image_processing_outputs import SemanticSegmentationPostProcessorOutput
 from transformers.image_utils import AnnotationFormat
 from transformers.models.auto.image_processing_auto import (
     IMAGE_PROCESSOR_MAPPING_NAMES,
@@ -751,6 +752,61 @@ class PostProcessSemanticSegmentationTestMixin:
                 # raise ValueError if target_sizes has wrong length
                 with pytest.raises(ValueError):
                     image_processor.post_process_semantic_segmentation(**inputs, target_sizes=target_sizes + [(1, 4)])
+
+
+class SemanticSegmentationScoresOnlyMixin:
+    """Opt-in tests for `return_segmentation=False` score-only post-processing."""
+
+    @require_torch
+    def test_post_process_semantic_segmentation_scores_only(self):
+        for image_processing_class in self.image_processing_classes.values():
+            with self.subTest(image_processing_class):
+                image_processor = image_processing_class(**self.image_processor_dict)
+                inputs, expected_shape = (
+                    self.image_processor_tester.prepare_post_process_semantic_segmentation_inputs()
+                )
+
+                output = image_processor.post_process_semantic_segmentation(
+                    **inputs, return_segmentation=False, return_segmentation_scores=True
+                )
+                self.assertEqual(len(output), self.image_processor_tester.batch_size)
+                self.assertIsInstance(output[0], SemanticSegmentationPostProcessorOutput)
+                self.assertIsNone(output[0].segmentation)
+                self.assertEqual(
+                    output[0].segmentation_scores.shape,
+                    (expected_shape["num_labels"], expected_shape["height"], expected_shape["width"]),
+                )
+
+                with pytest.raises(ValueError):
+                    image_processor.post_process_semantic_segmentation(
+                        **inputs, return_segmentation=False, return_segmentation_scores=False
+                    )
+
+    @require_torch
+    def test_post_process_semantic_segmentation_scores_only_target_sizes(self):
+        inputs, expected_shape = self.image_processor_tester.prepare_post_process_semantic_segmentation_inputs()
+
+        if "target_sizes" in inputs:
+            self.skipTest(reason="target_sizes already in required inputs")
+
+        for image_processing_class in self.image_processing_classes.values():
+            with self.subTest(image_processing_class):
+                image_processor = image_processing_class(**self.image_processor_dict)
+
+                target_sizes = [(1, 4) for _ in range(self.image_processor_tester.batch_size)]
+                output = image_processor.post_process_semantic_segmentation(
+                    **inputs,
+                    target_sizes=target_sizes,
+                    return_segmentation=False,
+                    return_segmentation_scores=True,
+                )
+                self.assertEqual(len(output), self.image_processor_tester.batch_size)
+                self.assertIsInstance(output[0], SemanticSegmentationPostProcessorOutput)
+                self.assertIsNone(output[0].segmentation)
+                self.assertEqual(
+                    output[0].segmentation_scores.shape,
+                    (expected_shape["num_labels"],) + target_sizes[0],
+                )
 
 
 class AnnotationFormatTestMixin:

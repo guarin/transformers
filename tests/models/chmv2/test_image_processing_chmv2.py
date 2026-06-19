@@ -20,6 +20,7 @@ from transformers.utils import is_torch_available
 from ...test_image_processing_common import (
     ImageProcessingTestMixin,
     PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
     prepare_image_inputs,
 )
 
@@ -106,7 +107,12 @@ class CHMv2ImageProcessingTester:
 
 @require_torch
 @require_vision
-class CHMv2ImageProcessingTest(ImageProcessingTestMixin, PostProcessSemanticSegmentationTestMixin, unittest.TestCase):
+class CHMv2ImageProcessingTest(
+    ImageProcessingTestMixin,
+    PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
+    unittest.TestCase,
+):
     def setUp(self):
         super().setUp()
         self.image_processor_tester = CHMv2ImageProcessingTester(self)

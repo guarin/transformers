@@ -26,14 +26,15 @@ class SemanticSegmentationPostProcessorOutput(BatchFeature):
 
 
     Attributes:
-        segmentation (`torch.LongTensor` of shape `(height, width)`):
+        segmentation (`torch.LongTensor` of shape `(height, width)`, *optional*):
             Predicted class label for each pixel. Height and width match ``target_sizes`` when provided,
-            otherwise the model's native logit size.
-        segmentation_scores (`torch.FloatTensor` of shape `(num_labels, height, width)`):
+            otherwise the model's native logit size. Is `None` when `return_segmentation=False` is passed to
+            `post_process_semantic_segmentation`.
+        segmentation_scores (`torch.FloatTensor` of shape `(num_labels, height, width)`, *optional*):
             Raw classification scores for each class at every pixel position.
             Height and width are the same as for ``segmentation``. May be `None` in cases where per-class
-            scores are not available.
+            scores are not available. Models that cannot compute scores raise on score-only requests.
     """
 
-    segmentation: "torch.Tensor"
+    segmentation: "torch.Tensor | None"
     segmentation_scores: "torch.Tensor | None"

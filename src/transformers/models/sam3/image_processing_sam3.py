@@ -721,6 +721,7 @@ class Sam3ImageProcessor(TorchvisionBackend):
         target_sizes: list[tuple[int, int]] | None = None,
         threshold: float = 0.5,
         return_segmentation_scores: bool = False,
+        return_segmentation: bool = True,
     ) -> "list[torch.Tensor] | list[SemanticSegmentationPostProcessorOutput]":
         """
         Converts the output of [`Sam3Model`] into semantic segmentation maps.
@@ -739,6 +740,10 @@ class Sam3ImageProcessor(TorchvisionBackend):
                 (binary class IDs, shape `(height, width)`) and `segmentation_scores` (sigmoid probabilities,
                 shape `(1, height, width)`).
 
+            return_segmentation (`bool`, *optional*, defaults to `True`):
+                Whether to return the hard segmentation map. When `False`, the hard map is not computed and
+                `segmentation` is `None` in each output.
+
         Returns:
             `list[torch.Tensor]` or `list[SemanticSegmentationPostProcessorOutput]`: When
             `return_segmentation_scores=False` (default), a list of length `batch_size` where each item is a
@@ -747,6 +752,9 @@ class Sam3ImageProcessor(TorchvisionBackend):
             `(height, width)`) and `segmentation_scores` (shape `(1, height, width)`). In both cases,
             `(height, width)` corresponds to the target size (if `target_sizes` is specified).
         """
+        if not return_segmentation and not return_segmentation_scores:
+            raise ValueError("At least one of `return_segmentation` or `return_segmentation_scores` must be True.")
+
         # Get semantic segmentation output
         # semantic_seg has shape (batch_size, 1, height, width)
         semantic_logits = outputs.semantic_seg
@@ -779,7 +787,9 @@ class Sam3ImageProcessor(TorchvisionBackend):
                 semantic_segmentation.append(
                     SemanticSegmentationPostProcessorOutput(
                         data={
-                            "segmentation": (resized_probs[0, 0] > threshold).to(torch.long),
+                            "segmentation": (resized_probs[0, 0] > threshold).to(torch.long)
+                            if return_segmentation
+                            else None,
                             "segmentation_scores": resized_probs[0],
                         }
                     )
@@ -788,14 +798,16 @@ class Sam3ImageProcessor(TorchvisionBackend):
             semantic_segmentation = [
                 SemanticSegmentationPostProcessorOutput(
                     data={
-                        "segmentation": (semantic_probs[i, 0] > threshold).to(torch.long),
+                        "segmentation": (semantic_probs[i, 0] > threshold).to(torch.long)
+                        if return_segmentation
+                        else None,
                         "segmentation_scores": semantic_probs[i],
                     }
                 )
                 for i in range(batch_size)
             ]
 
-        if not return_segmentation_scores:
+        if return_segmentation and not return_segmentation_scores:
             semantic_segmentation = [item.segmentation for item in semantic_segmentation]
 
         return semantic_segmentation

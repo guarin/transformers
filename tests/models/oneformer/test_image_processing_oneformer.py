@@ -27,6 +27,7 @@ from transformers.utils import is_torch_available, is_vision_available
 from ...test_image_processing_common import (
     ImageProcessingTestMixin,
     PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
     prepare_image_inputs,
 )
 
@@ -180,7 +181,10 @@ def prepare_semantic_batch_inputs():
 @require_torch
 @require_vision
 class OneFormerImageProcessingTest(
-    ImageProcessingTestMixin, PostProcessSemanticSegmentationTestMixin, unittest.TestCase
+    ImageProcessingTestMixin,
+    PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
+    unittest.TestCase,
 ):
     def setUp(self):
         super().setUp()

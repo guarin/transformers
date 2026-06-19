@@ -258,6 +258,7 @@ class SegGptImageProcessor(TorchvisionBackend):
         target_sizes: list[tuple[int, int]] | None = None,
         num_labels: int | None = None,
         return_segmentation_scores: bool = False,
+        return_segmentation: bool = True,
     ) -> "list[torch.Tensor] | list[SemanticSegmentationPostProcessorOutput]":
         """
         Converts the output of [`SegGptImageSegmentationOutput`] into segmentation maps. Only supports PyTorch.
@@ -278,6 +279,10 @@ class SegGptImageProcessor(TorchvisionBackend):
                 (class IDs, shape `(height, width)`) and `segmentation_scores` (shape `(num_labels+1, height, width)`
                 of negative squared L2 distances to each palette color, or `None` when `num_labels` is not provided).
 
+            return_segmentation (`bool`, *optional*, defaults to `True`):
+                Whether to return the hard segmentation map. When `False`, the hard map is not computed and
+                `segmentation` is `None` in each output.
+
         Returns:
             `list[torch.Tensor]` or `list[SemanticSegmentationPostProcessorOutput]`: When
             `return_segmentation_scores=False` (default), a list of length `batch_size` where each item is a
@@ -286,6 +291,11 @@ class SegGptImageProcessor(TorchvisionBackend):
             `(height, width)`) and `segmentation_scores` (shape `(num_labels+1, height, width)`). In both cases,
             `(height, width)` corresponds to the target size (if `target_sizes` is specified).
         """
+        if not return_segmentation and not return_segmentation_scores:
+            raise ValueError("At least one of `return_segmentation` or `return_segmentation_scores` must be True.")
+
+        if not return_segmentation and return_segmentation_scores and num_labels is None:
+            raise ValueError("`num_labels` must be provided when requesting SegGPT segmentation scores only.")
 
         requires_backends(self, ["torch"])
 
@@ -329,10 +339,10 @@ class SegGptImageProcessor(TorchvisionBackend):
                 dist = dist - palette_tensor
                 dist = torch.pow(dist, 2)
                 dist = torch.sum(dist, dim=-1)
-                pred = dist.argmin(dim=-1)
+                pred = dist.argmin(dim=-1) if return_segmentation else None
                 segmentation_scores = -dist.permute(2, 0, 1)
             else:
-                pred = mask.mean(dim=0).int()
+                pred = mask.mean(dim=0).int() if return_segmentation else None
                 segmentation_scores = None
 
             semantic_segmentation.append(
@@ -341,7 +351,7 @@ class SegGptImageProcessor(TorchvisionBackend):
                 )
             )
 
-        if not return_segmentation_scores:
+        if return_segmentation and not return_segmentation_scores:
             semantic_segmentation = [item.segmentation for item in semantic_segmentation]
 
         return semantic_segmentation

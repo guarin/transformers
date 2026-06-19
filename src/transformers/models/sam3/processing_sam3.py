@@ -536,7 +536,12 @@ class Sam3Processor(ProcessorMixin):
                     tensor[img_idx] = normalized_coords
 
     def post_process_semantic_segmentation(
-        self, outputs, target_sizes=None, threshold=0.5, return_segmentation_scores=False
+        self,
+        outputs,
+        target_sizes=None,
+        threshold=0.5,
+        return_segmentation_scores=False,
+        return_segmentation=True,
     ):
         """
         Converts the output of [`Sam3Model`] into semantic segmentation maps.
@@ -551,17 +556,24 @@ class Sam3Processor(ProcessorMixin):
                 Threshold for binarizing the semantic segmentation masks.
             return_segmentation_scores (`bool`, *optional*, defaults to `False`):
                 Whether to return segmentation scores alongside the segmentation map.
+            return_segmentation (`bool`, *optional*, defaults to `True`):
+                Whether to return the hard segmentation map. When `False`, the hard map is not computed and
+                `segmentation` is `None` in each output.
 
         Returns:
             semantic_segmentation: `list[torch.Tensor]` of length `batch_size`, where each item is a semantic
             segmentation map of shape (height, width) corresponding to the target_sizes entry (if `target_sizes` is
             specified). Each entry is a binary mask (0 or 1).
         """
+        if not return_segmentation and not return_segmentation_scores:
+            raise ValueError("At least one of `return_segmentation` or `return_segmentation_scores` must be True.")
+
         return self.image_processor.post_process_semantic_segmentation(
             outputs,
             target_sizes=target_sizes,
             threshold=threshold,
             return_segmentation_scores=return_segmentation_scores,
+            return_segmentation=return_segmentation,
         )
 
     def post_process_object_detection(self, outputs, threshold=0.3, target_sizes=None):

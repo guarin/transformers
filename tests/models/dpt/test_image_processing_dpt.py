@@ -24,6 +24,7 @@ from transformers.testing_utils import require_torch, require_vision
 from ...test_image_processing_common import (
     ImageProcessingTestMixin,
     PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
     prepare_image_inputs,
 )
 
@@ -124,7 +125,12 @@ def prepare_semantic_batch_inputs():
 
 @require_torch
 @require_vision
-class DPTImageProcessingTest(ImageProcessingTestMixin, PostProcessSemanticSegmentationTestMixin, unittest.TestCase):
+class DPTImageProcessingTest(
+    ImageProcessingTestMixin,
+    PostProcessSemanticSegmentationTestMixin,
+    SemanticSegmentationScoresOnlyMixin,
+    unittest.TestCase,
+):
     def setUp(self):
         super().setUp()
         self.image_processor_tester = DPTImageProcessingTester(self)
