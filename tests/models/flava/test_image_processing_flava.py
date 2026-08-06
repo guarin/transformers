@@ -60,8 +60,7 @@ class FlavaImageProcessingTester(ImageProcessingTester):
         kwargs.setdefault("total_mask_patches", 75)
         kwargs.setdefault("mask_group_min_patches", 16)
         kwargs.setdefault("mask_group_min_aspect_ratio", 0.3)
-        # the max aspect ratio is deliberately given the same value as the min one
-        kwargs.setdefault("mask_group_max_aspect_ratio", kwargs["mask_group_min_aspect_ratio"])
+        kwargs.setdefault("mask_group_max_aspect_ratio", 0.3)
         kwargs.setdefault("codebook_do_resize", True)
         kwargs.setdefault("codebook_size", {"height": 112, "width": 112})
         # LANCZOS resample is natively supported with torchvision >= 0.27.

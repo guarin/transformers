@@ -49,7 +49,6 @@ class IdeficsImageProcessingTester(ImageProcessingTester):
         super().__init__(parent, **kwargs)
 
     def prepare_image_processor_dict(self):
-        # `image_size` is both an input-generation arg and an Idefics image processor kwarg
         return {**super().prepare_image_processor_dict(), "image_size": self.image_size}
 
     def expected_output_image_shape(self, images):
