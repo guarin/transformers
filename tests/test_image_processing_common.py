@@ -179,6 +179,7 @@ def prepare_video_inputs(
 
 class ImageProcessingTester:
     """Base class for the `<Model>ImageProcessingTester` classes used by `ImageProcessingTestMixin`."""
+
     def __init__(
         self,
         parent,
